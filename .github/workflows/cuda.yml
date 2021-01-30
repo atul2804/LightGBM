@@ -11,7 +11,6 @@ on:
 env:
   github_actions: 'true'
   os_name: linux
-  compiler: gcc
   task: cuda
   conda_env: test-env
 
@@ -26,10 +25,13 @@ jobs:
         include:
           - method: source
             python_version: 3.6
+            compiler: gcc
           - method: pip
             python_version: 3.7
+            compiler: clang
           - method: wheel
             python_version: 3.8
+            compiler: gcc
     steps:
       - name: Setup or update software on host machine
         run: |
