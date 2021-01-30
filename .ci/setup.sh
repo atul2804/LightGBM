@@ -35,6 +35,7 @@ else  # Linux
             apt-utils \
             build-essential \
             ca-certificates \
+            cmake \
             curl \
             git \
             iputils-ping \
@@ -53,11 +54,6 @@ else  # Linux
         export LC_ALL="${LANG}"
         sudo locale-gen ${LANG}
         sudo update-locale
-
-        sudo apt-get install -y --no-install-recommends \
-            cmake \
-            clang \
-            libomp-dev
     fi
     if [[ $TASK == "mpi" ]]; then
         sudo apt-get update
@@ -83,6 +79,11 @@ else  # Linux
             cmake \
             curl \
             wget
+    fi
+    if [[ $COMPILER == "clang" && ($TASK == "cuda" || $IN_UBUNTU_LATEST_CONTAINER == "true") ]]; then
+        sudo apt-get install -y --no-install-recommends \
+            clang \
+            libomp-dev
     fi
     if [[ $SETUP_CONDA != "false" ]]; then
         wget -q -O conda.sh https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
