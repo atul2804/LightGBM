@@ -32,11 +32,25 @@ class RankingObjective : public ObjectiveFunction {
   ~RankingObjective() {}
 
   void Init(const Metadata& metadata, data_size_t num_data) override {
+
+    // Check for self defined param values
+    grid_alpha_ = static_cast<double>(config.grid_alpha);
+    grid_beta_ = static_cast<double>(config.grid_beta);
+    grid_gamma_ = static_cast<double>(config.grid_gamma);
+
+    std::cout << "Aplha : " << grid_alpha_ << " , Beta : " << grid_beta_ << " , Gamma : " << grid_gamma_ << std::endl;
+
     num_data_ = num_data;
     // get label
     label_ = metadata.label();
     // get weights
     weights_ = metadata.weights();
+    // get ranks
+    ranks_ = metadata.ranks();
+    // get item scores
+    item_scores_ = metadata.itemScores();
+    // get prices
+    prices_ = metadata.prices();
     // get boundries
     query_boundaries_ = metadata.query_boundaries();
     if (query_boundaries_ == nullptr) {
@@ -146,6 +160,7 @@ class LambdarankNDCG : public RankingObjective {
     for (data_size_t i = 0; i < cnt; ++i) {
       lambdas[i] = 0.0f;
       hessians[i] = 0.0f;
+      item_attr_bias_[i] = 0.0f;
     }
     // get sorted indices for scores
     std::vector<data_size_t> sorted_idx(cnt);
@@ -163,6 +178,22 @@ class LambdarankNDCG : public RankingObjective {
     }
     const double worst_score = score[sorted_idx[worst_idx]];
     double sum_lambdas = 0.0;
+
+    // calculate bias here
+
+    double item_decay_ = 1.0;
+    double overall_item_decay = 1.0;
+    data_size_t row_item = 0;
+    for (data_size_t i = 0; i < cnt; i++) {
+        overall_item_decay = 1.0;
+        item_decay_ = 1.0;
+        for (data_size_t j = 0; j < i+1 ; j++) {
+            row_item = j / 5;
+            item_decay_ = std::min((pow(grid_beta_, row_item + (grid_gamma_ * item_scores_[j]) + (price_gamma_ * prices_[j]))) * grid_alpha_, 1.0);   // Need to add price here as well
+            overall_item_decay *= item_decay_;
+        }
+        item_attr_bias_[i] = overall_item_decay;
+    }
     // start accmulate lambdas by pairs that contain at least one document above truncation level
     for (data_size_t i = 0; i < cnt - 1 && i < truncation_level_; ++i) {
       if (score[sorted_idx[i]] == kMinScore) { continue; }
@@ -205,12 +236,12 @@ class LambdarankNDCG : public RankingObjective {
         double p_lambda = GetSigmoid(delta_score);
         double p_hessian = p_lambda * (1.0f - p_lambda);
         // update
-        p_lambda *= -sigmoid_ * delta_pair_NDCG;
-        p_hessian *= sigmoid_ * sigmoid_ * delta_pair_NDCG;
-        lambdas[low] -= static_cast<score_t>(p_lambda);
-        hessians[low] += static_cast<score_t>(p_hessian);
-        lambdas[high] += static_cast<score_t>(p_lambda);
-        hessians[high] += static_cast<score_t>(p_hessian);
+        p_lambda *= -sigmoid_ * delta_pair_NDCG ;
+        p_hessian *= sigmoid_ * sigmoid_ * delta_pair_NDCG ;
+        lambdas[low] -= static_cast<score_t>(p_lambda / item_attr_bias_[low_rank]);
+        hessians[low] += static_cast<score_t>(p_hessian / item_attr_bias_[low_rank]);
+        lambdas[high] += static_cast<score_t>(p_lambda / item_attr_bias_[high_rank]);
+        hessians[high] += static_cast<score_t>(p_hessian / item_attr_bias_[high_rank]);
         // lambda is negative, so use minus to accumulate
         sum_lambdas -= 2 * p_lambda;
       }
@@ -261,12 +292,22 @@ class LambdarankNDCG : public RankingObjective {
   bool norm_;
   /*! \brief Truncation position for max DCG */
   int truncation_level_;
+  /*! \brief grid alpha param */
+  double grid_alpha_;
+  /*! \brief grid beta param */
+  double grid_beta_;
+  /*! \brief grid gamma param */
+  double grid_gamma_;
+  /*! \brief price gamma param */
+  double price_gamma_;
   /*! \brief Cache inverse max DCG, speed up calculation */
   std::vector<double> inverse_max_dcgs_;
   /*! \brief Cache result for sigmoid transform to speed up */
   std::vector<double> sigmoid_table_;
   /*! \brief Gains for labels */
   std::vector<double> label_gain_;
+  // item attr bias
+  std::vector<double> item_attr_biases_; /// mutable
   /*! \brief Number of bins in simoid table */
   size_t _sigmoid_bins = 1024 * 1024;
   /*! \brief Minimal input of sigmoid table */

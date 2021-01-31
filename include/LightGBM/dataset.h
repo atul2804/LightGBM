@@ -156,6 +156,42 @@ class Metadata {
   }
 
   /*!
+  * \brief Get ranks, if not exists, will return nullptr
+  * \return Pointer of ranks
+  */
+  inline const size_t* ranks() const { ///
+    if (!ranks_.empty()) {
+      return ranks_.data();
+    } else {
+      return nullptr;
+    }
+  }
+
+  /*!
+  * \brief Get prices, if not exists, will return nullptr
+  * \return Pointer of prices
+  */
+  inline const size_t* prices() const { ///
+    if (!prices_.empty()) {
+      return prices_.data();
+    } else {
+      return nullptr;
+    }
+  }
+
+  /*!
+  * \brief Get item features scores, if not exists, will return nullptr
+  * \return Pointer of item scores
+  */
+  inline const size_t* itemScores() const { ///
+    if (!item_scores_.empty()) {
+      return item_scores_.data();
+    } else {
+      return nullptr;
+    }
+  }
+
+  /*!
   * \brief Get data boundaries on queries, if not exists, will return nullptr
   *        we assume data will order by query,
   *        the interval of [query_boundaris[i], query_boundaris[i+1])
@@ -215,6 +251,12 @@ class Metadata {
   void LoadInitialScore();
   /*! \brief Load wights from file */
   void LoadWeights();
+  /*! \brief Load ranks from file */
+  void LoadRanks(); ///
+  /*! \brief Load prices from file */
+  void LoadPrices(); ///
+  /*! \brief Load item scores from file */
+  void LoadItemScores(); ///
   /*! \brief Load query boundaries from file */
   void LoadQueryBoundaries();
   /*! \brief Load query wights */
@@ -225,10 +267,22 @@ class Metadata {
   data_size_t num_data_;
   /*! \brief Number of weights, used to check correct weight file */
   data_size_t num_weights_;
+    /*! \brief Number of ranks, used to check correct rank file */
+  data_size_t num_ranks_; ///
+  /*! \brief Number of item scores, used to check correct rank file */
+  data_size_t num_item_scores_; ///
+  /*! \brief Number of position, used to check correct rank file */
+  data_size_t num_prices_; ///
   /*! \brief Label data */
   std::vector<label_t> label_;
   /*! \brief Weights data */
   std::vector<label_t> weights_;
+  /*! \brief ranks data */
+  std::vector<size_t> ranks_; ///
+  /*! \brief prices data */
+  std::vector<size_t> prices_; ///
+  /*! \brief item scores data */
+  std::vector<size_t> item_scores_; ///
   /*! \brief Query boundaries */
   std::vector<data_size_t> query_boundaries_;
   /*! \brief Query weights */
@@ -246,6 +300,9 @@ class Metadata {
   bool weight_load_from_file_;
   bool query_load_from_file_;
   bool init_score_load_from_file_;
+  bool item_score_load_from_file_;
+  bool price_load_from_file_;
+  bool rank_load_from_file_; ///
 };
 
 
